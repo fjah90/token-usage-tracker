@@ -1,6 +1,6 @@
 {
   "name": "token-usage-tracker",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Panel de consumo diario de Claude Code por modelo, ahorro de headroom y alertas al 80% de los límites del plan",
   "author": { "name": "Fernando Aponte" },
   "license": "MIT",
