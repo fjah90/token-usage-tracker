@@ -14,13 +14,10 @@ const limits = atom({ plugin: 'token-usage-tracker', key: 'limits' } as const, [
 const error = atom({ plugin: 'token-usage-tracker', key: 'error' } as const, null)
 const isScanning = atom({ plugin: 'token-usage-tracker', key: 'isScanning' } as const, false)
 const isExpanded = atom({ plugin: 'token-usage-tracker', key: 'isExpanded' } as const, false)
+const cost = atom({ plugin: 'token-usage-tracker', key: 'cost' } as const, null)
 
 const fmt = (n: number) =>
   n >= 1e9 ? `${(n / 1e9).toFixed(2)}B` : n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}K` : String(n)
-
-// Same local day as hooks/scan.mjs groups by.
-const localDay = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
 // Tokens the model processed fresh; cache reads are shown apart (cheap, but huge).
 const fresh = (m: ModelUsage) => m.input + m.output + m.cacheWrite
@@ -53,7 +50,9 @@ async function scan($: EngineInterface) {
   lastScan = now
   await update($, isScanning, () => true)
   try {
-    const run = await $.process.run(['node', `${$.plugin.root}/hooks/scan.mjs`, '--days', String(DAYS)], {
+    const run = await $.process.run([
+      'node', `${$.plugin.root}/hooks/scan.mjs`, '--days', String(DAYS), '--session', await $.session.id(),
+    ], {
       timeoutMs: 180_000,
     })
     if (run.exitCode !== 0) throw new Error(run.stderr.trim().split('\n').pop() || `exit ${run.exitCode}`)
@@ -95,7 +94,9 @@ export const register: Register = on => {
     await update($, isExpanded, () => wasExpanded)
     void scan($)
     $.clock.every(REFRESH_MS, () => void scan($))
-    await takeLimits($, (await $.session.usage()).rateLimits)
+    const usage = await $.session.usage()
+    await update($, cost, () => usage.cost?.usd ?? null)
+    await takeLimits($, usage.rateLimits)
 
     return started
   })
@@ -107,7 +108,7 @@ export const register: Register = on => {
     return { text: 'Panel de consumo abierto.' }
   })
 
-  // One plegable row above the prompt; the bands of other plugins stay below it.
+  // This session above the prompt, the general usage in the pane; the bands of other plugins stay below it.
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const rest = await next(e)
     if (e.props.hasSurvey) return rest
@@ -118,40 +119,43 @@ export const register: Register = on => {
     const open = await read($, isExpanded)
     const busy = await read($, isScanning)
 
-    const today = r?.days.find(d => d.date === localDay(new Date()))
-    const todayTok = today ? Object.values(today.models).reduce((a, m) => a + fresh(m), 0) : 0
-    const todaySaved = today ? r?.headroom?.days[today.date]?.tokensSaved : undefined
+    const usd = await read($, cost)
+    const models = Object.entries(r?.session ?? {}).sort(([, a], [, b]) => fresh(b) - fresh(a))
+    const sessionTok = models.reduce((a, [, m]) => a + fresh(m), 0)
     const hot = lim.some(l => l.percentUsed >= ALERT_PERCENT)
 
     const band = (
       <Box flexDirection="column">
-        <Button key="usage-toggle" label="Consumo" plain onPress={() => void toggleBand($)}>
-          <Text color={hot ? 'error' : 'success'}>{open ? '▾' : '▸'} consumo</Text>
+        {/* Summary always in view; Desktop draws a Button by its label alone, so the toggle says what it does. */}
+        <Box flexDirection="row" columnGap={1}>
+          <Text bold color={hot ? 'error' : 'success'}>consumo</Text>
           {lim.map(l => (
             <Text color={l.percentUsed >= ALERT_PERCENT ? 'error' : undefined}>
-              {'  '}
               {limitLabel(l)} {Math.round(l.percentUsed)}%
             </Text>
           ))}
           <Text dimColor>
-            {'  '}hoy {r ? fmt(todayTok) : '…'} tok{todaySaved ? ` · headroom −${fmt(todaySaved)}` : ''}
+            sesión {r ? fmt(sessionTok) : '…'} tok{usd != null ? ` · $${usd.toFixed(2)}` : ''}
           </Text>
-        </Button>
+          <Button
+            key="usage-toggle"
+            label={open ? '▾ Ocultar' : '▸ Por modelo'}
+            dimColor
+            onPress={() => void toggleBand($)}
+          />
+        </Box>
         {open &&
-          r?.days.map(d => (
+          models.map(([model, m]) => (
             <Text dimColor>
               {'  '}
-              {d.date.slice(5)}{'  '}
-              {Object.entries(d.models)
-                .sort(([, a], [, b]) => fresh(b) - fresh(a))
-                .map(([model, m]) => `${model.replace(/^claude-/, '')} ${fmt(fresh(m))}`)
-                .join(' · ')}
+              {model.replace(/^claude-/, '').padEnd(13)}
+              {fmt(fresh(m)).padStart(7)} tok · {m.requests} pet. · +{fmt(m.cacheRead)} caché
             </Text>
           ))}
         {open && (
-          <Box>
+          <Box flexDirection="row" columnGap={2}>
             <Button key="usage-refresh" label={busy ? 'Actualizando…' : 'Actualizar'} onPress={() => void scan($)} />
-            <Button key="usage-pane" label="Panel" onPress={() => void $.ui.open({ id: PANE, title: 'Consumo' })} />
+            <Button key="usage-pane" label="Consumo general" onPress={() => void $.ui.open({ id: PANE, title: 'Consumo' })} />
           </Box>
         )}
       </Box>
@@ -169,6 +173,10 @@ export const register: Register = on => {
 
   on('session.measure', async ($, e, next) => {
     if (e.changed.includes('rateLimits')) await takeLimits($, e.rateLimits)
+    if (e.changed.includes('cost')) {
+      await update($, cost, () => e.cost?.usd ?? null)
+      void scan($)
+    }
 
     return next(e)
   })

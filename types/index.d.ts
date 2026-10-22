@@ -19,6 +19,8 @@ export type Report = {
   fromDay: string
   days: DayUsage[]
   headroom: HeadroomSavings | null
+  /** This session's usage per model since it began (with --session). */
+  session: Record<string, ModelUsage> | null
 }
 
 export type Limit = { kind: string; percentUsed: number; resetsAt?: string }
@@ -31,6 +33,8 @@ declare module 'claude-code' {
       error: string | null
       isScanning: boolean
       isExpanded: boolean
+      /** This session's cost in USD, as /cost totals it. */
+      cost: number | null
     }
   }
 }
