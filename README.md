@@ -15,8 +15,8 @@ Un mod de Claude Code que muestra el consumo en una banda plegable encima del pr
 
 ## Uso
 
-- **Banda** encima del prompt (terminal y Desktop): `▸ consumo  5 h 42%  Semana 46%  hoy 3.7M tok`. Al pulsarla se despliega el detalle por día, con los botones **Actualizar** y **Panel**. Recuerda si la dejaste plegada o abierta.
-- **Panel lateral** con el detalle completo: `/consumo` o el botón **Panel**. Ya no se abre solo.
+- **Banda** encima del prompt (terminal y Desktop), con el consumo de **esta sesión**: `consumo  5 h 42%  Semana 46%  sesión 1.2M tok · $3.21  ▸ Por modelo`. **Por modelo** despliega el detalle de la sesión, con los botones **Actualizar** y **Consumo general**. Recuerda si la dejaste plegada o abierta.
+- **Panel lateral** con el consumo **general** de los últimos 7 días: `/consumo` o el botón **Consumo general**. Ya no se abre solo.
 - La línea de estado muestra `5 h 42% · Semana 46%`.
 - El consumo se actualiza al abrir la sesión, cada 5 minutos y con el botón **Actualizar**.
 
