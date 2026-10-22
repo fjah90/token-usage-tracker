@@ -2,7 +2,7 @@
 // Reads Claude Code transcripts (~/.claude/projects/**/*.jsonl) and prints the
 // token usage per local day and model as JSON. Parsed rows are cached per file
 // (mtime + size), so later runs only re-read the transcripts that changed.
-import { createReadStream, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
+import { createReadStream, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { createInterface } from 'node:readline'
@@ -147,6 +147,7 @@ const main = async () => {
   }))
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+// realpath: run through a junction or symlink, argv[1] is not the module's own path.
+if (import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
   main().catch(err => { process.stderr.write(String(err?.stack ?? err)); process.exit(1) })
 }
