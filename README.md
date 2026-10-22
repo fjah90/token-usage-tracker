@@ -28,6 +28,12 @@ Un mod de Claude Code que muestra el consumo en una banda plegable encima del pr
 
 La caché del escáner está en `~/.claude/token-usage-tracker/cache.json` y se puede borrar sin problema.
 
+## Junto a prompt-cache-control
+
+Este mod se usa junto con [prompt-cache-control](https://github.com/davila7/claude-code-templates), de claude-code-templates, que mide la caché del prompt: tokens leídos y escritos por petición, y la cuenta atrás hasta que caduca. Se complementan: este mod cuenta cuánto consumes y aquel, cuánto de eso sale de la caché.
+
+Las dos bandas comparten el espacio sobre el prompt: la de consumo arriba y la de caché debajo. Ninguna tapa a la otra. Cada mod funciona también por separado.
+
 ## Desarrollo
 
 ```bash
