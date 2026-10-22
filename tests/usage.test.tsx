@@ -25,7 +25,7 @@ const PANE = {
   component: 'Pane',
   requestId: 'usage',
   props: {
-    title: 'Consumo',
+    title: 'Token usage',
     isFocused: false,
     bodyColumns: 48,
     placement: 'dock',
@@ -38,7 +38,7 @@ test('the pane shows the day per model, headroom and a limit past 80%', async ($
   mock.clock(on, { now: Date.parse('2026-10-22T12:00:00Z') })
   mock.store(on)
   const toasts: string[] = []
-  on('command.register', () => ({ value: { command: 'consumo' } }))
+  on('command.register', () => ({ value: { command: 'token-usage' } }))
   on('ui.open', () => ({ value: { isPlaced: true } }))
   on('ui.status', () => ({ value: {} }))
   on('ui.toast', (_, e) => (toasts.push(e.text), { value: {} }))
@@ -65,7 +65,7 @@ test('the pane shows the day per model, headroom and a limit past 80%', async ($
   await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
 
   expect(toasts.length).toBe(1)
-  expect(toasts[0]).toMatch(/5 h al 85%/)
+  expect(toasts[0]).toMatch(/5h limit at 85%/)
 
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...PANE, surface })
@@ -83,10 +83,10 @@ test('the pane shows the day per model, headroom and a limit past 80%', async ($
     surface: 'desktop',
     props: { hasSurvey: false, isWorking: false, maxRows: 20, bodyColumns: 80, scroll: { offset: 0, bodyRows: 19 }, view: {} },
   })
-  expect((await band.find({ type: 'Text', text: /sesión/ }))?.text).toMatch(/sesión 100\.1K tok · \$3\.21/)
+  expect((await band.find({ type: 'Text', text: /session/ }))?.text).toMatch(/session 100\.1K tok · \$3\.21/)
   expect(await band.find({ type: 'Text', text: /other band/ })).toBeTruthy()
   expect(await band.find({ type: 'Text', text: /opus-5-5/ })).toBeUndefined()
   await band.press({ key: 'usage-toggle' })
-  expect((await band.find({ type: 'Text', text: /opus-5-5/ }))?.text).toMatch(/opus-5-5\s+100\.1K tok · 40 pet\. · \+3\.0M caché/)
+  expect((await band.find({ type: 'Text', text: /opus-5-5/ }))?.text).toMatch(/opus-5-5\s+100\.1K tok · 40 req · \+3\.0M cache read/)
   await band.unmount()
 })

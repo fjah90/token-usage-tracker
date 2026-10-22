@@ -22,7 +22,7 @@ const fmt = (n: number) =>
 // Tokens the model processed fresh; cache reads are shown apart (cheap, but huge).
 const fresh = (m: ModelUsage) => m.input + m.output + m.cacheWrite
 
-const LIMIT_LABEL: Record<string, string> = { five_hour: '5 h', seven_day: 'Semana' }
+const LIMIT_LABEL: Record<string, string> = { five_hour: '5h', seven_day: 'Week' }
 const limitLabel = (l: Limit) => LIMIT_LABEL[l.kind] ?? l.kind
 
 const bar = (pct: number) => {
@@ -33,9 +33,9 @@ const bar = (pct: number) => {
 const resetText = (iso?: string) => {
   if (!iso) return ''
   const d = new Date(iso)
-  const hm = d.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })
+  const hm = d.toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' })
   const isToday = d.toDateString() === new Date().toDateString()
-  return isToday ? `reinicia ${hm}` : `reinicia ${d.toLocaleDateString('es', { weekday: 'short', day: 'numeric' })} ${hm}`
+  return isToday ? `resets ${hm}` : `resets ${d.toLocaleDateString('en', { weekday: 'short', day: 'numeric' })} ${hm}`
 }
 
 const statusText = (list: Limit[]) =>
@@ -59,7 +59,7 @@ async function scan($: EngineInterface) {
     await update($, report, () => JSON.parse(run.stdout) as Report)
     await update($, error, () => null)
   } catch (err) {
-    await update($, error, () => `No se pudo leer el consumo: ${String((err as Error)?.message ?? err)}`)
+    await update($, error, () => `Couldn't read usage: ${String((err as Error)?.message ?? err)}`)
   } finally {
     await update($, isScanning, () => false)
   }
@@ -79,7 +79,7 @@ async function takeLimits($: EngineInterface, list: Limit[]) {
   const alerted = ((await $.store.get('alerted')) as string[] | undefined) ?? []
   const due = list.filter(l => l.percentUsed >= ALERT_PERCENT && !alerted.includes(`${l.kind}@${l.resetsAt}`))
   for (const l of due) {
-    $.ui.toast(`Límite ${limitLabel(l)} al ${Math.round(l.percentUsed)}% · ${resetText(l.resetsAt)}`)
+    $.ui.toast(`${limitLabel(l)} limit at ${Math.round(l.percentUsed)}% · ${resetText(l.resetsAt)}`)
   }
   if (due.length > 0) {
     await $.store.set('alerted', [...alerted, ...due.map(l => `${l.kind}@${l.resetsAt}`)].slice(-20))
@@ -89,7 +89,7 @@ async function takeLimits($: EngineInterface, list: Limit[]) {
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     const started = await next(e)
-    await $.command.register({ name: 'consumo', description: 'Abre el panel de consumo de tokens y límites' })
+    await $.command.register({ name: 'token-usage', description: 'Open the token usage and plan limits pane' })
     const wasExpanded = (await $.store.get('isExpanded')) === true
     await update($, isExpanded, () => wasExpanded)
     void scan($)
@@ -101,11 +101,11 @@ export const register: Register = on => {
     return started
   })
 
-  on('command.run', { command: 'consumo' }, async $ => {
-    await $.ui.open({ id: PANE, title: 'Consumo' })
+  on('command.run', { command: 'token-usage' }, async $ => {
+    await $.ui.open({ id: PANE, title: 'Token usage' })
     void scan($)
 
-    return { text: 'Panel de consumo abierto.' }
+    return { text: 'Token usage pane opened.' }
   })
 
   // This session above the prompt, the general usage in the pane; the bands of other plugins stay below it.
@@ -128,18 +128,18 @@ export const register: Register = on => {
       <Box flexDirection="column">
         {/* Summary always in view; Desktop draws a Button by its label alone, so the toggle says what it does. */}
         <Box flexDirection="row" columnGap={1}>
-          <Text bold color={hot ? 'error' : 'success'}>consumo</Text>
+          <Text bold color={hot ? 'error' : 'success'}>usage</Text>
           {lim.map(l => (
             <Text color={l.percentUsed >= ALERT_PERCENT ? 'error' : undefined}>
               {limitLabel(l)} {Math.round(l.percentUsed)}%
             </Text>
           ))}
           <Text dimColor>
-            sesión {r ? fmt(sessionTok) : '…'} tok{usd != null ? ` · $${usd.toFixed(2)}` : ''}
+            session {r ? fmt(sessionTok) : '…'} tok{usd != null ? ` · $${usd.toFixed(2)}` : ''}
           </Text>
           <Button
             key="usage-toggle"
-            label={open ? '▾ Ocultar' : '▸ Por modelo'}
+            label={open ? '▾ Hide' : '▸ By model'}
             dimColor
             onPress={() => void toggleBand($)}
           />
@@ -149,13 +149,13 @@ export const register: Register = on => {
             <Text dimColor>
               {'  '}
               {model.replace(/^claude-/, '').padEnd(13)}
-              {fmt(fresh(m)).padStart(7)} tok · {m.requests} pet. · +{fmt(m.cacheRead)} caché
+              {fmt(fresh(m)).padStart(7)} tok · {m.requests} req · +{fmt(m.cacheRead)} cache read
             </Text>
           ))}
         {open && (
           <Box flexDirection="row" columnGap={2}>
-            <Button key="usage-refresh" label={busy ? 'Actualizando…' : 'Actualizar'} onPress={() => void scan($)} />
-            <Button key="usage-pane" label="Consumo general" onPress={() => void $.ui.open({ id: PANE, title: 'Consumo' })} />
+            <Button key="usage-refresh" label={busy ? 'Refreshing…' : 'Refresh'} onPress={() => void scan($)} />
+            <Button key="usage-pane" label="All usage" onPress={() => void $.ui.open({ id: PANE, title: 'Token usage' })} />
           </Box>
         )}
       </Box>
@@ -204,8 +204,8 @@ export const register: Register = on => {
 
     return (
       <Box flexDirection="column">
-        <Text weight="semibold">Límites del plan</Text>
-        {lim.length === 0 && <Text dimColor>Sin lectura todavía (llega con la próxima respuesta).</Text>}
+        <Text weight="semibold">Plan limits</Text>
+        {lim.length === 0 && <Text dimColor>No reading yet (it arrives with the next response).</Text>}
         {lim.map(l => (
           <Text color={l.percentUsed >= ALERT_PERCENT ? 'error' : undefined}>
             {limitLabel(l).padEnd(7)}
@@ -214,18 +214,18 @@ export const register: Register = on => {
         ))}
 
         <Text> </Text>
-        <Text weight="semibold">Últimos {DAYS} días</Text>
+        <Text weight="semibold">Last {DAYS} days</Text>
         {err && <Text color="error">{err}</Text>}
-        {!r && !err && <Text dimColor>Calculando…</Text>}
+        {!r && !err && <Text dimColor>Calculating…</Text>}
         {r && (
           <Text>
-            {fmt(totals.fresh)} tok · {fmt(totals.requests)} peticiones <Text dimColor>(+{fmt(totals.cacheRead)} caché leída)</Text>
+            {fmt(totals.fresh)} tok · {fmt(totals.requests)} requests <Text dimColor>(+{fmt(totals.cacheRead)} cache read)</Text>
           </Text>
         )}
         {hr && (
           <Text>
             headroom: −{fmt(hrWindow.tokens)} tok · ${hrWindow.usd.toFixed(2)}{' '}
-            <Text dimColor>(histórico ${hr.lifetime.usdSaved.toFixed(0)})</Text>
+            <Text dimColor>(lifetime ${hr.lifetime.usdSaved.toFixed(0)})</Text>
           </Text>
         )}
 
@@ -235,7 +235,7 @@ export const register: Register = on => {
             <Text weight="semibold">
               {d.date}{' '}
               <Text dimColor>
-                · {fmt(Object.values(d.models).reduce((a, m) => a + m.requests, 0))} pet.
+                · {fmt(Object.values(d.models).reduce((a, m) => a + m.requests, 0))} req
                 {hr?.days[d.date] ? ` · headroom −${fmt(hr.days[d.date].tokensSaved)}` : ''}
               </Text>
             </Text>
@@ -245,7 +245,7 @@ export const register: Register = on => {
                 <Text>
                   {'  '}
                   {model.replace(/^claude-/, '').padEnd(13)}
-                  {fmt(fresh(m)).padStart(7)} <Text dimColor>+{fmt(m.cacheRead)} caché</Text>
+                  {fmt(fresh(m)).padStart(7)} <Text dimColor>+{fmt(m.cacheRead)} cache</Text>
                 </Text>
               ))}
           </Box>
@@ -253,10 +253,10 @@ export const register: Register = on => {
 
         <Text> </Text>
         <Box>
-          <Button key="refresh" label={busy ? 'Actualizando…' : 'Actualizar'} onPress={() => void scan($)} />
-          {r && <Text dimColor> {new Date(r.generatedAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</Text>}
+          <Button key="refresh" label={busy ? 'Refreshing…' : 'Refresh'} onPress={() => void scan($)} />
+          {r && <Text dimColor> {new Date(r.generatedAt).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' })}</Text>}
         </Box>
-        <Text dimColor>tok = entrada + salida + escritura de caché</Text>
+        <Text dimColor>tok = input + output + cache write</Text>
       </Box>
     )
   })
