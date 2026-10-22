@@ -8,6 +8,12 @@ Un mod de Claude Code que muestra el consumo en una banda plegable encima del pr
 
 `tok` = entrada + salida + escritura de caché. La lectura de caché se muestra aparte porque es barata, pero su volumen es enorme.
 
+## Instalación
+
+```
+/plugin install token-usage-tracker --marketplace fernandoapontedev-cb/token-usage-tracker
+```
+
 ## Requisitos
 
 - Claude Code 2.1.304 o posterior
@@ -39,3 +45,7 @@ claude plugin update token-usage-tracker@aponte-mods
 ```
 
 Antes hay que subir `version` en `.claude-plugin/plugin.json`, y después reiniciar la sesión.
+
+## Licencia
+
+MIT
