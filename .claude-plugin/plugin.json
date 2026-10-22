@@ -1,7 +1,7 @@
 {
   "name": "token-usage-tracker",
-  "version": "0.3.1",
-  "description": "Panel de consumo diario de Claude Code por modelo, ahorro de headroom y alertas al 80% de los límites del plan",
+  "version": "0.4.0",
+  "description": "Claude Code token usage per session and per day by model, plan limits with alerts at 80%, and headroom savings",
   "author": { "name": "Fernando Aponte" },
   "license": "MIT",
   "types": "./types/index.d.ts"
