@@ -1,40 +1,41 @@
 # token-usage-tracker
 
-Un mod de Claude Code que muestra el consumo en una banda plegable encima del prompt y, si lo pides, en un panel lateral:
+A Claude Code mod that shows your token usage in a collapsible band above the prompt and, on request, in a side pane:
 
-- **Tokens por día y por modelo** de los últimos 7 días. Los lee de los transcripts locales (`~/.claude/projects/**/*.jsonl`) y cuenta cada respuesta una sola vez.
-- **Límites del plan** (5 h y semanal) con barra de progreso. Un aviso emergente salta una vez por ventana al llegar al 80 %.
-- **Ahorro de headroom** (opcional): tokens y USD ahorrados por día, sacados de `~/.headroom/proxy_savings.json`. Si no usas headroom, esa sección no aparece.
+- **This session's usage** in the band: tokens per model, requests and cost.
+- **Tokens per day and per model** for the last 7 days in the pane. It reads the local transcripts (`~/.claude/projects/**/*.jsonl`) and counts each response once.
+- **Plan limits** (5-hour and weekly) with a progress bar. A toast fires once per window when one reaches 80%.
+- **headroom savings** (optional): tokens and USD saved per day, read from `~/.headroom/proxy_savings.json`. Without headroom, that section stays hidden.
 
-`tok` = entrada + salida + escritura de caché. La lectura de caché se muestra aparte porque es barata, pero su volumen es enorme.
+`tok` = input + output + cache write. Cache reads are shown apart: they are cheap, but their volume is huge.
 
-## Instalación
+## Install
 
 ```
 /plugin install token-usage-tracker --marketplace fjah90/token-usage-tracker
 ```
 
-## Requisitos
+## Requirements
 
-- Claude Code 2.1.304 o posterior
-- Node.js 20 o posterior en el `PATH` (el escáner `hooks/scan.mjs` corre con `node`)
+- Claude Code 2.1.304 or later
+- Node.js 20 or later on the `PATH` (the scanner, `hooks/scan.mjs`, runs with `node`)
 
-## Uso
+## Usage
 
-- **Banda** encima del prompt (terminal y Desktop), con el consumo de **esta sesión**: `consumo  5 h 42%  Semana 46%  sesión 1.2M tok · $3.21  ▸ Por modelo`. **Por modelo** despliega el detalle de la sesión, con los botones **Actualizar** y **Consumo general**. Recuerda si la dejaste plegada o abierta.
-- **Panel lateral** con el consumo **general** de los últimos 7 días: `/consumo` o el botón **Consumo general**. Ya no se abre solo.
-- La línea de estado muestra `5 h 42% · Semana 46%`.
-- El consumo se actualiza al abrir la sesión, cada 5 minutos y con el botón **Actualizar**.
+- **Band** above the prompt (terminal and Desktop), with **this session's** usage: `usage  5h 42%  Week 46%  session 1.2M tok · $3.21  ▸ By model`. **By model** expands the session's detail, with the **Refresh** and **All usage** buttons. It remembers whether you left it open.
+- **Side pane** with the **overall** usage of the last 7 days: `/token-usage` or the **All usage** button.
+- The status line shows `5h 42% · Week 46%`.
+- Usage refreshes when the session starts, after each response (at most every 30 seconds), every 5 minutes, and with **Refresh**.
 
-La caché del escáner está en `~/.claude/token-usage-tracker/cache.json` y se puede borrar sin problema.
+The scanner's cache lives in `~/.claude/token-usage-tracker/cache.json` and is safe to delete.
 
-## Junto a prompt-cache-control
+## With prompt-cache-control
 
-Este mod se usa junto con [prompt-cache-control](https://github.com/davila7/claude-code-templates), de claude-code-templates, que mide la caché del prompt: tokens leídos y escritos por petición, y la cuenta atrás hasta que caduca. Se complementan: este mod cuenta cuánto consumes y aquel, cuánto de eso sale de la caché.
+This mod is used alongside [prompt-cache-control](https://github.com/davila7/claude-code-templates) from claude-code-templates, which meters the prompt cache: tokens read and written per request, and a countdown to its expiry. They complement each other: this mod counts how much you use, that one how much of it comes from the cache.
 
-Las dos bandas comparten el espacio sobre el prompt: la de consumo arriba y la de caché debajo. Ninguna tapa a la otra. Cada mod funciona también por separado.
+Both bands share the space above the prompt, usage on top and cache below; neither hides the other. Each mod also works on its own.
 
-## Desarrollo
+## Development
 
 ```bash
 claude plugin validate .
@@ -43,15 +44,15 @@ node tests/scan-check.mjs
 claude --plugin-dir .
 ```
 
-Desktop ejecuta una copia del mod instalado. Después de un cambio:
+An installed mod runs from a copy. After a change, bump `version` in `.claude-plugin/plugin.json`, then:
 
 ```bash
 claude plugin marketplace update aponte-mods
 claude plugin update token-usage-tracker@aponte-mods
 ```
 
-Antes hay que subir `version` en `.claude-plugin/plugin.json`, y después reiniciar la sesión.
+and restart the session.
 
-## Licencia
+## License
 
 MIT
