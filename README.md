@@ -30,3 +30,12 @@ claude plugin test .
 node tests/scan-check.mjs
 claude --plugin-dir .
 ```
+
+Desktop ejecuta una copia del mod instalado. Después de un cambio:
+
+```bash
+claude plugin marketplace update aponte-mods
+claude plugin update token-usage-tracker@aponte-mods
+```
+
+Antes hay que subir `version` en `.claude-plugin/plugin.json`, y después reiniciar la sesión.
