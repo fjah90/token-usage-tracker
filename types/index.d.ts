@@ -30,6 +30,7 @@ declare module 'claude-code' {
       limits: Limit[]
       error: string | null
       isScanning: boolean
+      isExpanded: boolean
     }
   }
 }

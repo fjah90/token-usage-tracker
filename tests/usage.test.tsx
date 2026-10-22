@@ -51,6 +51,11 @@ test('the pane shows the day per model, headroom and a limit past 80%', async ($
     },
   }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
+  // Another plugin's band, beneath this one.
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>other band</Text>
+  })
 
   await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
 
@@ -64,4 +69,19 @@ test('the pane shows the day per model, headroom and a limit past 80%', async ($
     expect((await ui.find({ type: 'Text', text: /headroom: / }))?.text).toMatch(/2\.5M tok · \$7\.50/)
     await ui.unmount()
   }
+
+  // The band starts folded, opens on a press, and keeps another plugin's band below it.
+  const band = await $.ui.mount({
+    plugin: 'token-usage-tracker',
+    component: 'AbovePrompt',
+    requestId: 'band',
+    surface: 'desktop',
+    props: { hasSurvey: false, isWorking: false, maxRows: 20, bodyColumns: 80, scroll: { offset: 0, bodyRows: 19 }, view: {} },
+  })
+  expect(await band.find({ type: 'Text', text: /consumo/ })).toBeTruthy()
+  expect(await band.find({ type: 'Text', text: /other band/ })).toBeTruthy()
+  expect(await band.find({ type: 'Text', text: /10-22\s+opus-5-5 1\.2M/ })).toBeUndefined()
+  await band.press({ key: 'usage-toggle' })
+  expect((await band.find({ type: 'Text', text: /10-22/ }))?.text).toMatch(/10-22\s+opus-5-5 1\.2M · sonnet-5-5 250\.5K/)
+  await band.unmount()
 })

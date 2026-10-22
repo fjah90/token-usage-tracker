@@ -13,9 +13,14 @@ const report = atom({ plugin: 'token-usage-tracker', key: 'report' } as const, n
 const limits = atom({ plugin: 'token-usage-tracker', key: 'limits' } as const, [])
 const error = atom({ plugin: 'token-usage-tracker', key: 'error' } as const, null)
 const isScanning = atom({ plugin: 'token-usage-tracker', key: 'isScanning' } as const, false)
+const isExpanded = atom({ plugin: 'token-usage-tracker', key: 'isExpanded' } as const, false)
 
 const fmt = (n: number) =>
   n >= 1e9 ? `${(n / 1e9).toFixed(2)}B` : n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}K` : String(n)
+
+// Same local day as hooks/scan.mjs groups by.
+const localDay = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
 // Tokens the model processed fresh; cache reads are shown apart (cheap, but huge).
 const fresh = (m: ModelUsage) => m.input + m.output + m.cacheWrite
@@ -61,6 +66,12 @@ async function scan($: EngineInterface) {
   }
 }
 
+async function toggleBand($: EngineInterface) {
+  const value = !(await read($, isExpanded))
+  await update($, isExpanded, () => value)
+  await $.store.set('isExpanded', value)
+}
+
 // One toast per window and reset: the key is kind@resetsAt.
 async function takeLimits($: EngineInterface, list: Limit[]) {
   await update($, limits, () => list)
@@ -80,7 +91,8 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     const started = await next(e)
     await $.command.register({ name: 'consumo', description: 'Abre el panel de consumo de tokens y límites' })
-    if (e.surface !== 'terminal') void $.ui.open({ id: PANE, title: 'Consumo' })
+    const wasExpanded = (await $.store.get('isExpanded')) === true
+    await update($, isExpanded, () => wasExpanded)
     void scan($)
     $.clock.every(REFRESH_MS, () => void scan($))
     await takeLimits($, (await $.session.usage()).rateLimits)
@@ -93,6 +105,66 @@ export const register: Register = on => {
     void scan($)
 
     return { text: 'Panel de consumo abierto.' }
+  })
+
+  // One plegable row above the prompt; the bands of other plugins stay below it.
+  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+    const rest = await next(e)
+    if (e.props.hasSurvey) return rest
+
+    const { Box, Text, Button } = $.ui.resolve(e)
+    const r = await read($, report)
+    const lim = await read($, limits)
+    const open = await read($, isExpanded)
+    const busy = await read($, isScanning)
+
+    const today = r?.days.find(d => d.date === localDay(new Date()))
+    const todayTok = today ? Object.values(today.models).reduce((a, m) => a + fresh(m), 0) : 0
+    const todaySaved = today ? r?.headroom?.days[today.date]?.tokensSaved : undefined
+    const hot = lim.some(l => l.percentUsed >= ALERT_PERCENT)
+
+    const band = (
+      <Box flexDirection="column">
+        <Button key="usage-toggle" label="Consumo" plain onPress={() => void toggleBand($)}>
+          <Text color={hot ? 'error' : 'success'}>{open ? '▾' : '▸'} consumo</Text>
+          {lim.map(l => (
+            <Text color={l.percentUsed >= ALERT_PERCENT ? 'error' : undefined}>
+              {'  '}
+              {limitLabel(l)} {Math.round(l.percentUsed)}%
+            </Text>
+          ))}
+          <Text dimColor>
+            {'  '}hoy {r ? fmt(todayTok) : '…'} tok{todaySaved ? ` · headroom −${fmt(todaySaved)}` : ''}
+          </Text>
+        </Button>
+        {open &&
+          r?.days.map(d => (
+            <Text dimColor>
+              {'  '}
+              {d.date.slice(5)}{'  '}
+              {Object.entries(d.models)
+                .sort(([, a], [, b]) => fresh(b) - fresh(a))
+                .map(([model, m]) => `${model.replace(/^claude-/, '')} ${fmt(fresh(m))}`)
+                .join(' · ')}
+            </Text>
+          ))}
+        {open && (
+          <Box>
+            <Button key="usage-refresh" label={busy ? 'Actualizando…' : 'Actualizar'} onPress={() => void scan($)} />
+            <Button key="usage-pane" label="Panel" onPress={() => void $.ui.open({ id: PANE, title: 'Consumo' })} />
+          </Box>
+        )}
+      </Box>
+    )
+
+    return rest ? (
+      <Box flexDirection="column">
+        {band}
+        {rest}
+      </Box>
+    ) : (
+      band
+    )
   })
 
   on('session.measure', async ($, e, next) => {
