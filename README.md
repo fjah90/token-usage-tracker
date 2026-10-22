@@ -11,7 +11,7 @@ Un mod de Claude Code que muestra el consumo en una banda plegable encima del pr
 ## Instalación
 
 ```
-/plugin install token-usage-tracker --marketplace fernandoapontedev-cb/token-usage-tracker
+/plugin install token-usage-tracker --marketplace fjah90/token-usage-tracker
 ```
 
 ## Requisitos
