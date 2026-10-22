@@ -1,0 +1,5 @@
+{
+  "name": "aponte-mods",
+  "owner": { "name": "Fernando Aponte" },
+  "plugins": [{ "name": "token-usage-tracker", "source": "./" }]
+}
