@@ -1,6 +1,6 @@
 {
   "name": "aponte-mods",
   "owner": { "name": "Fernando Aponte" },
-  "description": "Mods de Claude Code de Fernando Aponte",
+  "description": "Claude Code mods by Fernando Aponte",
   "plugins": [{ "name": "token-usage-tracker", "source": "./" }]
 }
