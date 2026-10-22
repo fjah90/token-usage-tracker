@@ -78,6 +78,18 @@ export const headroomDays = (history, fromDay) => {
   return out
 }
 
+// One session's rows summed per model, all days: its transcript and its subagents' carry its id.
+export const sessionModels = rows => {
+  const out = {}
+  for (const d of aggregate(rows, '')) {
+    for (const [model, m] of Object.entries(d.models)) {
+      const t = (out[model] ??= { input: 0, output: 0, cacheWrite: 0, cacheRead: 0, requests: 0 })
+      for (const k of Object.keys(t)) t[k] += m[k]
+    }
+  }
+  return out
+}
+
 const readHeadroom = (path, fromDay) => {
   if (!existsSync(path)) return null
   try {
@@ -99,6 +111,7 @@ const main = async () => {
   const days = Number(arg('days', 7))
   const projects = arg('projects', join(configDir, 'projects'))
   const cachePath = arg('cache', join(configDir, 'token-usage-tracker', 'cache.json'))
+  const sessionId = arg('session')
   const headroomPath = arg('headroom', join(homedir(), '.headroom', 'proxy_savings.json'))
 
   const from = new Date()
@@ -128,6 +141,9 @@ const main = async () => {
     fromDay,
     days: aggregate(Object.values(next).flatMap(f => f.rows), fromDay),
     headroom: readHeadroom(headroomPath, fromDay),
+    session: sessionId
+      ? sessionModels(Object.entries(next).filter(([path]) => path.includes(sessionId)).flatMap(([, f]) => f.rows))
+      : null,
   }))
 }
 

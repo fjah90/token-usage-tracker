@@ -1,7 +1,7 @@
 // node tests/scan-check.mjs
 import assert from 'node:assert/strict'
 
-import { aggregate, headroomDays, localDay } from '../hooks/scan.mjs'
+import { aggregate, headroomDays, localDay, sessionModels } from '../hooks/scan.mjs'
 
 const ts = localDay('2026-10-22T12:00:00Z') === '2026-10-22' ? '2026-10-22T12:00:00Z' : '2026-10-22T16:00:00Z'
 const days = aggregate([
@@ -20,5 +20,12 @@ const hr = headroomDays([
   { timestamp: '2026-10-21T12:00:00Z', total_tokens_saved: 400, compression_savings_usd: 4 },
 ], '2026-10-16')
 assert.deepEqual(hr, { '2026-10-21': { tokensSaved: 250, usdSaved: 2.5 } })
+
+const sess = sessionModels([
+  ['a:1', '2026-10-01T12:00:00Z', 'claude-opus-5-5', 1, 1, 1, 1],
+  ['a:1', '2026-10-01T12:00:00Z', 'claude-opus-5-5', 1, 1, 1, 1],
+  ['b:2', '2026-10-22T12:00:00Z', 'claude-opus-5-5', 2, 2, 2, 2],
+])
+assert.deepEqual(sess['claude-opus-5-5'], { input: 3, output: 3, cacheWrite: 3, cacheRead: 3, requests: 2 })
 
 console.log('scan-check ok')
