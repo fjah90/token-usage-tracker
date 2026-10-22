@@ -1,6 +1,6 @@
 # token-usage-tracker
 
-Un mod de Claude Code que añade un panel de consumo junto al chat:
+Un mod de Claude Code que muestra el consumo en una banda plegable encima del prompt y, si lo pides, en un panel lateral:
 
 - **Tokens por día y por modelo** de los últimos 7 días. Los lee de los transcripts locales (`~/.claude/projects/**/*.jsonl`) y cuenta cada respuesta una sola vez.
 - **Límites del plan** (5 h y semanal) con barra de progreso. Un aviso emergente salta una vez por ventana al llegar al 80 %.
@@ -15,8 +15,9 @@ Un mod de Claude Code que añade un panel de consumo junto al chat:
 
 ## Uso
 
-- Claude Desktop (pestaña Code): el panel **Consumo** se abre al empezar la sesión.
-- Terminal: `/consumo` abre el panel. La línea de estado muestra `5 h 18% · Semana 44%`.
+- **Banda** encima del prompt (terminal y Desktop): `▸ consumo  5 h 42%  Semana 46%  hoy 3.7M tok`. Al pulsarla se despliega el detalle por día, con los botones **Actualizar** y **Panel**. Recuerda si la dejaste plegada o abierta.
+- **Panel lateral** con el detalle completo: `/consumo` o el botón **Panel**. Ya no se abre solo.
+- La línea de estado muestra `5 h 42% · Semana 46%`.
 - El consumo se actualiza al abrir la sesión, cada 5 minutos y con el botón **Actualizar**.
 
 La caché del escáner está en `~/.claude/token-usage-tracker/cache.json` y se puede borrar sin problema.
